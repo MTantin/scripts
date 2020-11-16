@@ -17,7 +17,7 @@ ODOO_PATH=/opt/odoo
 ODOO_DIR=odoo14
 
 ODOO_DB_USER=odoo
-ODOO_DB_PWD=odoo
+ODOO_DB_PWD=mysecretpasswd
 ODOO_DB_HOST=localhost
 ODOO_DB_NAME=odoo14
 
@@ -38,10 +38,10 @@ fi
 
 # Create Odoo postgres user
 if ! psql -d "postgresql://$ODOO_DB_USER:$ODOO_DB_PWD@$ODOO_DB_HOST/postgres" -c "select now()" &> /dev/null; then
-    printf "${GREEN}###### postgres user's odoo doesn't exist, create it...${NORMAL}\n"
-    sudo -u postgres createuser -P -s -e $ODOO_DB_USER
+    printf "${GREEN}###### postgres user odoo doesn't exist, create it...${NORMAL}\n"
+    sudo -u postgres psql -c "CREATE ROLE $ODOO_DB_USER WITH CREATEDB LOGIN PASSWORD '$ODOO_DB_PWD'"
 else
-    printf "${YELLOW}###### postgres user's odoo already exists, skip...${NORMAL}\n"
+    printf "${YELLOW}###### postgres user odoo already exists, skip...${NORMAL}\n"
 fi
 
 # Install nodeJS

@@ -53,7 +53,7 @@ fi
 mkdir -p $ODOO_PATH
 if [ ! -d "$ODOO_PATH/$ODOO_DIR" ]; then
     printf "${GREEN}###### Odoo 14 directory doesn't exists, create it...${NORMAL}\n"
-    git clone https://github.com/odoo/odoo -b 14.0 --depth 1 /opt/odoo/$ODOO_DIR
+    git clone https://github.com/odoo/odoo -b 14.0 --depth 1 $ODOO_PATH/$ODOO_DIR
 else
     printf "${YELLOW}###### Odoo 14 directory already exists, skip...${NORMAL}\n"
 fi
@@ -75,6 +75,28 @@ chmod +x $ENVIRONMENT_DIR/odoo-bin
 # Launch for the first time Odoo to create configuration file
 $ENVIRONMENT_DIR/odoo-bin -s --data-dir=$ENVIRONMENT_DIR/data_dir --addons-path=$ODOO_PATH/$ODOO_DIR/odoo/addons,$ODOO_PATH/$ODOO_DIR/addons -d $ODOO_DB_NAME --db-filter=^odoo14$ --db_user=$ODOO_DB_USER --db_password=$ODOO_DB_PWD --db_host=$ODOO_DB_HOST --stop-after-init
 sed -i "s/admin_passwd = admin/admin_passwd = $UUID/g" $ENVIRONMENT_DIR/odoo.conf
+
+# Set Odoo as service
+ODOO_SERVICE_FILE=/etc/init.d/odoo14
+if [ ! -f "$ODOO_SERVICE_FILE" ]; then
+    printf "${GREEN}###### Odoo 14 service file doesn't exists, create it...${NORMAL}\n"
+    cp $ODOO_PATH/$ODOO_DIR/debian/init $ODOO_SERVICE_FILE
+    sed -i "s#^PATH\=.*#PATH=/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/bin:$ENVIRONMENT_DIR/venv/bin#"  $ODOO_SERVICE_FILE
+    sed -i "s#^DAEMON\=.*#DAEMON=$ENVIRONMENT_DIR/venv/bin/odoo#"  $ODOO_SERVICE_FILE
+    sed -i "s#^NAME\=.*#NAME=$ODOO_DIR#"  $ODOO_SERVICE_FILE
+    sed -i "s#^DESC\=.*#DESC=$ODOO_DIR#"  $ODOO_SERVICE_FILE
+    sed -i "s#^CONFIG\=.*#CONFIG=$ENVIRONMENT_DIR/odoo.conf#"  $ODOO_SERVICE_FILE
+    sed -i "s#^LOGFILE\=.*#LOGFILE=/var/log/odoo/$ODOO_DIR-server.log#"  $ODOO_SERVICE_FILE
+    sed -i "s#^USER\=.*#USER=root#"  $ODOO_SERVICE_FILE
+    chmod +x $ODOO_SERVICE_FILE
+else
+    printf "${YELLOW}###### Odoo 14 service file already exists, skip...${NORMAL}\n"
+fi
+
+if ! service --status-all | grep -Fq 'odoo14'; then
+    update-rc.d odoo14 defaults
+    update-rc.d odoo14 enable
+fi
 
 # Clean all
 apt-get clean

@@ -26,7 +26,9 @@ UUID=$(cat /proc/sys/kernel/random/uuid)
 # Update environment and install prerequisites
 apt-get update
 apt-get install -y git wget postgresql virtualenv \
-                python3 python3-ldap python3-lxml python3-psycopg2 python3-pip python3-dev
+                libxml2-dev libxslt1-dev libsasl2-dev libldap2-dev libssl-dev libpq-dev \
+                libtiff5-dev libjpeg8-dev libopenjp2-7-dev zlib1g-dev libfreetype6-dev liblcms2-dev libwebp-dev tcl8.6-dev tk8.6-dev python3-tk libharfbuzz-dev libfribidi-dev libxcb1-dev \
+                python3 python3-ldap python3-lxml python3-psycopg2 python3-pip python3-dev python3-setuptools
 
 # Create Odoo linux user
 if ! id -u "odoo"; then
@@ -53,7 +55,7 @@ npm install -g rtlcss
 if ! dpkg-query -l wkhtmltox &> /dev/null; then
     printf "${GREEN}###### wkhtmltox not installed, installation...${NORMAL}n"
     wget https://github.com/wkhtmltopdf/wkhtmltopdf/releases/download/0.12.5/wkhtmltox_0.12.5-1.focal_amd64.deb
-    apt install ./wkhtmltox_0.12.5-1.focal_amd64.deb
+    apt install -y ./wkhtmltox_0.12.5-1.focal_amd64.deb
     rm wkhtmltox_0.12.5-1.focal_amd64.deb
 else
     printf "${YELLOW}###### wkhtmltox already installed, skip...${NORMAL}\n"
@@ -75,6 +77,12 @@ virtualenv -p python3 $ENVIRONMENT_DIR/venv
 # Install Odoo in virtual environment
 CFLAGS="-O0" $ENVIRONMENT_DIR/venv/bin/pip install lxml==4.3.2
 $ENVIRONMENT_DIR/venv/bin/pip install -r $ODOO_PATH/$ODOO_DIR/requirements.txt
+
+if [ $? -ne 0 ]; then
+   printf "${RED}###### Odoo 14 requirements installation failed!${NORMAL}\n"
+   exit 1
+fi
+
 $ENVIRONMENT_DIR/venv/bin/pip install $ODOO_PATH/$ODOO_DIR
 
 # Create exec to launch Odoo faster

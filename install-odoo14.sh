@@ -98,6 +98,9 @@ if ! service --status-all | grep -Fq 'odoo14'; then
     update-rc.d odoo14 enable
 fi
 
+# Add cron to restart Odoo service every day at 04:00
+{ echo "0 4 * * * service odoo14 restart"; } | crontab -
+
 # Clean all
 apt-get clean
 

@@ -15,16 +15,26 @@ fi
 ENVIRONMENT_DIR=/opt/odoo14
 ODOO_PATH=/opt/odoo
 ODOO_DIR=odoo14
+
 ODOO_DB_USER=odoo
 ODOO_DB_PWD=odoo
 ODOO_DB_HOST=localhost
 ODOO_DB_NAME=odoo14
+
 UUID=$(cat /proc/sys/kernel/random/uuid)
 
 # Update environment and install prerequisites
 apt-get update
 apt-get install -y git wget postgresql virtualenv \
                 python3 python3-ldap python3-lxml python3-psycopg2 python3-pip python3-dev
+
+# Create Odoo linux user
+if ! id -u "odoo"; then
+    printf "${GREEN}###### linux user odoo doesn't exist, create it...${NORMAL}\n"
+    useradd -r -s /bin/false odoo
+else
+    printf "${YELLOW}###### linux user odoo already exists, skip...${NORMAL}\n"
+fi
 
 # Create Odoo postgres user
 if ! psql -d "postgresql://$ODOO_DB_USER:$ODOO_DB_PWD@$ODOO_DB_HOST/postgres" -c "select now()" &> /dev/null; then
@@ -87,7 +97,7 @@ if [ ! -f "$ODOO_SERVICE_FILE" ]; then
     sed -i "s#^DESC\=.*#DESC=$ODOO_DIR#"  $ODOO_SERVICE_FILE
     sed -i "s#^CONFIG\=.*#CONFIG=$ENVIRONMENT_DIR/odoo.conf#"  $ODOO_SERVICE_FILE
     sed -i "s#^LOGFILE\=.*#LOGFILE=/var/log/odoo/$ODOO_DIR-server.log#"  $ODOO_SERVICE_FILE
-    sed -i "s#^USER\=.*#USER=root#"  $ODOO_SERVICE_FILE
+    sed -i "s#^USER\=.*#USER=odoo#"  $ODOO_SERVICE_FILE
     chmod +x $ODOO_SERVICE_FILE
 else
     printf "${YELLOW}###### Odoo 14 service file already exists, skip...${NORMAL}\n"

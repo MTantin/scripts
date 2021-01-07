@@ -17,9 +17,8 @@ ODOO_PATH=/opt/odoo
 ODOO_DIR=odoo14
 
 ODOO_DB_USER=odoo
-ODOO_DB_PWD=mysecretpasswd
+ODOO_DB_PWD=odoo
 ODOO_DB_HOST=localhost
-ODOO_DB_NAME=odoo14
 
 UUID=$(cat /proc/sys/kernel/random/uuid)
 
@@ -91,7 +90,7 @@ echo -e "$ENVIRONMENT_DIR/venv/bin/python $ENVIRONMENT_DIR/venv/bin/odoo -c $ENV
 chmod +x $ENVIRONMENT_DIR/odoo-bin
 
 # Launch for the first time Odoo to create configuration file
-$ENVIRONMENT_DIR/odoo-bin -s --data-dir=$ENVIRONMENT_DIR/data_dir --addons-path=$ODOO_PATH/$ODOO_DIR/odoo/addons,$ODOO_PATH/$ODOO_DIR/addons -d $ODOO_DB_NAME --db-filter=^odoo14$ --db_user=$ODOO_DB_USER --db_password=$ODOO_DB_PWD --db_host=$ODOO_DB_HOST --stop-after-init
+$ENVIRONMENT_DIR/odoo-bin -s --data-dir=$ENVIRONMENT_DIR/data_dir --addons-path=$ODOO_PATH/$ODOO_DIR/odoo/addons,$ODOO_PATH/$ODOO_DIR/addons --db-filter=^%h$ --db_user=$ODOO_DB_USER --db_password=$ODOO_DB_PWD --db_host=$ODOO_DB_HOST --stop-after-init
 sed -i "s/admin_passwd = admin/admin_passwd = $UUID/g" $ENVIRONMENT_DIR/odoo.conf
 
 # Set Odoo as service

@@ -19,6 +19,8 @@ ODOO_DIR=odoo14
 ODOO_DB_USER=odoo
 ODOO_DB_PWD=odoo
 ODOO_DB_HOST=localhost
+ODOO_LOGS_DIR=/var/log/odoo
+ODOO_LOGFILE=$ODOO_LOGS_DIR/odoo14-server.log
 
 UUID=$(cat /proc/sys/kernel/random/uuid)
 
@@ -36,6 +38,15 @@ if ! id -u "odoo"; then
 else
     printf "${YELLOW}###### linux user odoo already exists, skip...${NORMAL}\n"
 fi
+
+# Create log dir and set odoo rights
+if [ ! -d "$ODOO_LOGS_DIR" ]; then
+    printf "${GREEN}###### Odoo logs dir doesn't exist, create it...${NORMAL}\n"
+    mkdir $ODOO_LOGS_DIR
+else
+    printf "${YELLOW}###### Odoo logs dir already exists, skip...${NORMAL}\n"
+fi
+chown -R odoo:odoo $ODOO_LOGS_DIR
 
 # Create Odoo postgres user
 if ! psql -d "postgresql://$ODOO_DB_USER:$ODOO_DB_PWD@$ODOO_DB_HOST/postgres" -c "select now()" &> /dev/null; then
@@ -70,8 +81,18 @@ else
 fi
 
 # Create environment with addons directory and virtual environment
-mkdir -p $ENVIRONMENT_DIR $ENVIRONMENT_DIR/addons
+mkdir -p $ENVIRONMENT_DIR $ENVIRONMENT_DIR/addons $ENVIRONMENT_DIR/data_dir
 virtualenv -p python3 $ENVIRONMENT_DIR/venv
+
+chown -R odoo:odoo $ENVIRONMENT_DIR/data_dir
+
+if [ ! -f "$ENVIRONMENT_DIR/odoo.conf" ]; then
+    printf "${GREEN}###### Odoo 14 config file doesn't exists, create it...${NORMAL}\n"
+    touch $ENVIRONMENT_DIR/odoo.conf
+    chown odoo:odoo $ENVIRONMENT_DIR/odoo.conf
+else
+    printf "${YELLOW}###### Odoo 14 config file already exists, skip...${NORMAL}\n"
+fi
 
 # Install Odoo in virtual environment
 CFLAGS="-O0" $ENVIRONMENT_DIR/venv/bin/pip install lxml==4.3.2
@@ -85,7 +106,7 @@ fi
 $ENVIRONMENT_DIR/venv/bin/pip install $ODOO_PATH/$ODOO_DIR
 
 # Launch for the first time Odoo to create configuration file
-sudo -u odoo $ENVIRONMENT_DIR/venv/bin/python $ENVIRONMENT_DIR/venv/bin/odoo -c $ENVIRONMENT_DIR/odoo.conf -s --data-dir=$ENVIRONMENT_DIR/data_dir --addons-path=$ODOO_PATH/$ODOO_DIR/odoo/addons,$ODOO_PATH/$ODOO_DIR/addons --db-filter=^%h$ --db_user=$ODOO_DB_USER --db_password=$ODOO_DB_PWD --db_host=$ODOO_DB_HOST --proxy-mode --stop-after-init
+sudo -u odoo $ENVIRONMENT_DIR/venv/bin/python $ENVIRONMENT_DIR/venv/bin/odoo -c $ENVIRONMENT_DIR/odoo.conf -s --data-dir=$ENVIRONMENT_DIR/data_dir --addons-path=$ODOO_PATH/$ODOO_DIR/odoo/addons,$ODOO_PATH/$ODOO_DIR/addons --db-filter=^%h$ --db_user=$ODOO_DB_USER --db_password=$ODOO_DB_PWD --db_host=$ODOO_DB_HOST --proxy-mode --logfile $ODOO_LOGFILE --stop-after-init
 sed -i "s/admin_passwd = admin/admin_passwd = $UUID/g" $ENVIRONMENT_DIR/odoo.conf
 
 # Set Odoo as service

@@ -24,7 +24,7 @@ UUID=$(cat /proc/sys/kernel/random/uuid)
 
 # Update environment and install prerequisites
 apt-get update
-apt-get install -y git wget postgresql virtualenv \
+apt-get install -y git wget postgresql virtualenv nginx \
                 libxml2-dev libxslt1-dev libsasl2-dev libldap2-dev libssl-dev libpq-dev \
                 libtiff5-dev libjpeg8-dev libopenjp2-7-dev zlib1g-dev libfreetype6-dev liblcms2-dev libwebp-dev tcl8.6-dev tk8.6-dev python3-tk libharfbuzz-dev libfribidi-dev libxcb1-dev \
                 python3 python3-ldap python3-lxml python3-psycopg2 python3-pip python3-dev python3-setuptools
@@ -84,13 +84,8 @@ fi
 
 $ENVIRONMENT_DIR/venv/bin/pip install $ODOO_PATH/$ODOO_DIR
 
-# Create exec to launch Odoo faster
-echo "#!/bin/bash" > $ENVIRONMENT_DIR/odoo-bin
-echo -e "$ENVIRONMENT_DIR/venv/bin/python $ENVIRONMENT_DIR/venv/bin/odoo -c $ENVIRONMENT_DIR/odoo.conf \x24\x40" >> $ENVIRONMENT_DIR/odoo-bin
-chmod +x $ENVIRONMENT_DIR/odoo-bin
-
 # Launch for the first time Odoo to create configuration file
-$ENVIRONMENT_DIR/odoo-bin -s --data-dir=$ENVIRONMENT_DIR/data_dir --addons-path=$ODOO_PATH/$ODOO_DIR/odoo/addons,$ODOO_PATH/$ODOO_DIR/addons --db-filter=^%h$ --db_user=$ODOO_DB_USER --db_password=$ODOO_DB_PWD --db_host=$ODOO_DB_HOST --stop-after-init
+sudo -u odoo $ENVIRONMENT_DIR/venv/bin/python $ENVIRONMENT_DIR/venv/bin/odoo -c $ENVIRONMENT_DIR/odoo.conf -s --data-dir=$ENVIRONMENT_DIR/data_dir --addons-path=$ODOO_PATH/$ODOO_DIR/odoo/addons,$ODOO_PATH/$ODOO_DIR/addons --db-filter=^%h$ --db_user=$ODOO_DB_USER --db_password=$ODOO_DB_PWD --db_host=$ODOO_DB_HOST --proxy-mode --stop-after-init
 sed -i "s/admin_passwd = admin/admin_passwd = $UUID/g" $ENVIRONMENT_DIR/odoo.conf
 
 # Set Odoo as service
@@ -117,6 +112,19 @@ fi
 
 # Add cron to restart Odoo service every day at 04:00
 { echo "0 4 * * * service odoo14 restart"; } | crontab -
+
+# Set Nginx
+NGINX_DIR=/etc/nginx
+NGINX_AVAILABLE_DIR=$NGINX_DIR/sites-available
+NGINX_ENABLED_DIR=$NGINX_DIR/sites-enabled
+
+cp -f ./files/nginx-default-* $NGINX_AVAILABLE_DIR
+if [ ! -f "$NGINX_ENABLED_DIR/nginx-default-odoo-upstreams" ]; then
+    printf "${GREEN}###### Nginx upstreams for Odoo14 doesn't exists, create it...${NORMAL}\n"
+    ln -s $NGINX_AVAILABLE_DIR/nginx-default-odoo-upstreams $NGINX_ENABLED_DIR
+else
+    printf "${YELLOW}###### Nginx upstreams for Odoo14 already exists, skip...${NORMAL}\n"
+fi
 
 # Clean all
 apt-get clean

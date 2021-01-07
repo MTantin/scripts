@@ -1,0 +1,8 @@
+# Upstreams
+upstream odoo {
+    server 127.0.0.1:8069;
+}
+
+upstream odoochat {
+    server 127.0.0.1:8072;
+}
